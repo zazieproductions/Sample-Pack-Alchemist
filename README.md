@@ -29,8 +29,11 @@ frequency-domain views, and persistence.
 ## First screen
 
 The preview above is a **real capture** of the application and links to the live
-deployment. A second capture shows the [active generative state](docs/images/project-active.png),
-and the strongest technical detail is visible in the [export structure](docs/images/project-detail.png).
+deployment. A second capture shows the [active generative state](https://zazieproductions.github.io/Sample-Pack-Alchemist/),
+and the strongest technical detail is visible in the [export structure](https://zazieproductions.github.io/Sample-Pack-Alchemist/).
+
+[![Active generative state](docs/images/project-active.png)](https://zazieproductions.github.io/Sample-Pack-Alchemist/)
+[![Export structure detail](docs/images/project-detail.png)](https://zazieproductions.github.io/Sample-Pack-Alchemist/)
 
 ## Stack
 
