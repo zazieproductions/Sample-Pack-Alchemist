@@ -1,0 +1,449 @@
+/* assets/css/styles.css
+ * ---------------------------------------------------------------------------
+ * Sample Pack Alchemist custom layers.
+ *
+ * Tailwind is used for layout utilities; this file owns the specific
+ * "cybernetic archive" vocabulary — the near-black chassis, gold pigment,
+ * red alert traces, dotted diagnostic hints, and the hard-edged panels.
+ */
+
+/* ── base reset & custom dark theme ── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #0d0d0f;
+  color: #eaeaea;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+/* custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1a1e;
+}
+::-webkit-scrollbar-thumb {
+  background: #3d3d44;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #5a5a62;
+}
+
+/* accent colors */
+.accent-gold { color: #d4a853; }
+.accent-gold-bg { background: #d4a853; }
+.accent-gold-border { border-color: #d4a853; }
+.accent-red { color: #c94b4b; }
+.accent-red-bg { background: #c94b4b; }
+.accent-red-border { border-color: #c94b4b; }
+
+.bg-dark-900 { background: #0d0d0f; }
+.bg-dark-800 { background: #141418; }
+.bg-dark-700 { background: #1c1c22; }
+.bg-dark-600 { background: #26262e; }
+.bg-dark-500 { background: #32323b; }
+.border-dark-600 { border-color: #26262e; }
+.border-dark-500 { border-color: #32323b; }
+
+.text-muted { color: #9a9aa6; }
+.text-soft { color: #c8c8d0; }
+
+/* card / panel style */
+.panel {
+  background: #141418;
+  border: 1px solid #26262e;
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: border-color 0.2s ease;
+}
+.panel:hover {
+  border-color: #3d3d44;
+}
+.panel-glow {
+  box-shadow: 0 0 0 1px rgba(212, 168, 83, 0.08), 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* drag zone */
+.drop-zone {
+  border: 2px dashed #32323b;
+  border-radius: 16px;
+  background: #141418;
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: #d4a853;
+  background: #1c1c22;
+  box-shadow: 0 0 0 4px rgba(212, 168, 83, 0.06);
+}
+.drop-zone.dragover {
+  border-style: solid;
+}
+.drop-zone:focus-visible {
+  outline: 2px solid #d4a853;
+  outline-offset: 2px;
+}
+
+/* table */
+.file-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.file-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9a9aa6;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #26262e;
+}
+.file-table td {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #1c1c22;
+  vertical-align: middle;
+}
+.file-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+.file-table .file-name {
+  font-weight: 500;
+  color: #eaeaea;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* form controls */
+select,
+input,
+textarea {
+  background: #1c1c22;
+  border: 1px solid #32323b;
+  border-radius: 8px;
+  color: #eaeaea;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  transition: border-color 0.2s ease;
+  outline: none;
+  width: 100%;
+}
+select:focus,
+input:focus,
+textarea:focus {
+  border-color: #d4a853;
+  box-shadow: 0 0 0 3px rgba(212, 168, 83, 0.08);
+}
+select option {
+  background: #1c1c22;
+  color: #eaeaea;
+}
+
+/* buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.btn-primary {
+  background: #d4a853;
+  color: #0d0d0f;
+}
+.btn-primary:hover {
+  background: #e0b863;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(212, 168, 83, 0.25);
+}
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.btn-secondary {
+  background: #26262e;
+  color: #eaeaea;
+  border: 1px solid #32323b;
+}
+.btn-secondary:hover {
+  background: #32323b;
+  border-color: #3d3d44;
+}
+.btn-danger {
+  background: #3d1f1f;
+  color: #e07a7a;
+  border: 1px solid #5a2a2a;
+}
+.btn-danger:hover {
+  background: #4d2525;
+}
+.btn-sm {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
+.btn-xs {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.65rem;
+  border-radius: 4px;
+}
+
+/* badge / tag */
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  background: #26262e;
+  color: #9a9aa6;
+}
+.badge-gold {
+  background: rgba(212, 168, 83, 0.15);
+  color: #d4a853;
+}
+.badge-red {
+  background: rgba(201, 75, 75, 0.15);
+  color: #e07a7a;
+}
+
+/* tree preview */
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  font-size: 0.8rem;
+  color: #b0b0ba;
+}
+.tree-item .icon {
+  width: 18px;
+  text-align: center;
+  color: #d4a853;
+}
+.tree-item .icon-folder { color: #d4a853; }
+.tree-item .icon-file { color: #7a7a86; }
+
+/* Inline icon layer. `icon-svg` is used wherever the UI previously relied on
+ * emoji glyphs; the stroke path keeps the "cybernetic archive" line language
+ * consistent and renders identically in headless/CI environments. */
+.icon-svg {
+  display: inline-block;
+  vertical-align: -0.15em;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  color: currentColor;
+}
+.tree-depth-0 { padding-left: 0; }
+.tree-depth-1 { padding-left: 1.5rem; }
+.tree-depth-2 { padding-left: 3rem; }
+
+/* progress bar */
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: #1c1c22;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-bar .fill {
+  height: 100%;
+  width: 0%;
+  background: #d4a853;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* responsive */
+@media (max-width: 768px) {
+  .panel {
+    padding: 1rem;
+  }
+  .file-table th,
+  .file-table td {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.7rem;
+  }
+  .file-table .file-name {
+    max-width: 100px;
+  }
+  .hide-on-mobile {
+    display: none;
+  }
+}
+
+/* animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* loading spinner */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #32323b;
+  border-top-color: #d4a853;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* tooltip helper */
+.hint {
+  font-size: 0.7rem;
+  color: #7a7a86;
+  cursor: help;
+  border-bottom: 1px dotted #3d3d44;
+}
+
+/* toast */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: #1c1c22;
+  border: 1px solid #32323b;
+  border-radius: 12px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.85rem;
+  color: #eaeaea;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  z-index: 999;
+  max-width: 360px;
+  animation: fadeIn 0.3s ease;
+}
+.toast-success { border-left: 3px solid #d4a853; }
+.toast-error { border-left: 3px solid #c94b4b; }
+.toast-info { border-left: 3px solid #5a8ab5; }
+
+/* ── layout utility layer
+ * The original app loaded Tailwind's play CDN at runtime, which prevents a
+ * reproducible offline archive. The exact subset of utilities used by the
+ * markup is encoded here in plain CSS. This keeps the deployed site static,
+ * fast, and network-independent while preserving the same layout.
+ * ─────────────────────────────────────────────────────────────────────── */
+
+.sticky { position: sticky; width: 100%; }
+.top-0 { top: 0; }
+.z-50 { z-index: 50; }
+.backdrop-blur-md { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+
+.max-w-7xl { max-width: 80rem; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+
+.flex { display: flex; }
+.grid { display: grid; }
+.block { display: block; }
+.hidden { display: none !important; }
+.inline-flex { display: inline-flex; }
+
+.items-center { align-items: center; }
+.items-end { align-items: flex-end; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-col { flex-direction: column; }
+
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.space-y-1 > * + * { margin-top: 0.25rem; }
+.space-y-6 > * + * { margin-top: 1.5rem; }
+
+.p-3 { padding: 0.75rem; }
+.p-4 { padding: 1rem; }
+.p-6 { padding: 1.5rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+.py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 0.75rem; }
+.mt-8 { margin-top: 2rem; }
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.ml-1 { margin-left: 0.25rem; }
+.ml-auto { margin-left: auto; }
+.-mt-0\.5 { margin-top: -0.125rem; }
+
+.text-center { text-align: center; }
+.text-white { color: #ffffff; }
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.text-base { font-size: 1rem; line-height: 1.5rem; }
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }
+.text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.tracking-tight { letter-spacing: -0.025em; }
+.italic { font-style: italic; }
+
+.w-full { width: 100%; }
+.max-h-64 { max-height: 16rem; }
+.overflow-x-auto { overflow-x: auto; }
+.overflow-y-auto { overflow-y: auto; }
+.rounded-xl { border-radius: 0.75rem; }
+.border { border-width: 1px; border-style: solid; }
+.border-b { border-bottom: 1px solid #26262e; }
+.border-t { border-top: 1px solid #26262e; }
+.rounded-full { border-radius: 9999px; }
+
+.opacity-60 { opacity: 0.6; }
+.pointer-events-none { pointer-events: none; }
+.ml-auto { margin-left: auto; }
+
+@media (min-width: 768px) {
+  .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .md\:col-span-2 { grid-column: span 2 / span 2; }
+  .md\:p-10 { padding: 2.5rem; }
+}
+
+@media (min-width: 1024px) {
+  .lg\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* Header translucent chassis. The slash in the original Tailwind class is
+ * escaped here so the archive reads without the runtime CDN. */
+.bg-dark-900\/80 { background: rgba(13, 13, 15, 0.8); }
