@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const portArg = process.argv.find((arg) => arg.startsWith('--port='));
-const port = portArg ? Number(portArg.split('=')[1]) : 8080;
+const port = Number(portArg ? portArg.split('=')[1] : process.env.SPA_PORT || 8080);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
