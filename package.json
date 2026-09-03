@@ -1,0 +1,53 @@
+{
+  "name": "sample-pack-alchemist",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A browser-only audio archive that turns loose samples into catalogued, renamed, market-ready sample packs.",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs --port 8080",
+    "build": "node scripts/build.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "check": "npm run lint && npm run typecheck && npm test",
+    "screenshots": "node scripts/capture-screenshots.mjs",
+    "social": "node scripts/build-social-preview.mjs",
+    "verify": "npm run check && npm run build"
+  },
+  "dependencies": {
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "@sparticuz/chromium": "^132.0.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0",
+    "playwright": "^1.49.1",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zazieproductions/Sample-Pack-Alchemist.git"
+  },
+  "keywords": [
+    "creative-technology",
+    "sample-pack",
+    "audio",
+    "web-audio",
+    "procedural",
+    "sound-design",
+    "creative-coding",
+    "portfolio"
+  ],
+  "author": "Zazie Productions",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zazieproductions/Sample-Pack-Alchemist/issues"
+  },
+  "homepage": "https://zazieproductions.github.io/Sample-Pack-Alchemist/"
+}

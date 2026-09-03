@@ -1,0 +1,19 @@
+# Dependencies and build output
+node_modules/
+dist/
+
+# Local scratch
+*.log
+.DS_Store
+
+# Optional local config
+.env
+.env.local
+
+# Editor
+.idea/
+.vscode/
+
+# Test runner caches
+coverage/
+.mypy_cache/

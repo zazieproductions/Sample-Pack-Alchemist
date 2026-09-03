@@ -1,1656 +1,269 @@
-I've created a complete, dark-themed single-page web app called "Sample Pack Alchemist" that analyzes audio files, organizes them, and exports a ready-to-sell sample pack as a ZIP.
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sample Pack Alchemist</title>
-    <!-- Tailwind CSS via CDN -->
-    <script src="https://cdn.tailwindcss.com">
-    </script>
-    <!-- JSZip for ZIP export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js">
-    </script>
-    <!-- FileSaver for download trigger -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js">
-    </script>
-    <style>
-        /* ── base reset & custom dark theme ── */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            background: #0d0d0f;
-            color: #eaeaea;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            min-height: 100vh;
-        }
-        /* custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1a1a1e;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #3d3d44;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #5a5a62;
-        }
-        /* accent colors */
-        .accent-gold {
-            color: #d4a853;
-        }
-        .accent-gold-bg {
-            background: #d4a853;
-        }
-        .accent-gold-border {
-            border-color: #d4a853;
-        }
-        .accent-red {
-            color: #c94b4b;
-        }
-        .accent-red-bg {
-            background: #c94b4b;
-        }
-        .accent-red-border {
-            border-color: #c94b4b;
-        }
-        .bg-dark-900 {
-            background: #0d0d0f;
-        }
-        .bg-dark-800 {
-            background: #141418;
-        }
-        .bg-dark-700 {
-            background: #1c1c22;
-        }
-        .bg-dark-600 {
-            background: #26262e;
-        }
-        .bg-dark-500 {
-            background: #32323b;
-        }
-        .border-dark-600 {
-            border-color: #26262e;
-        }
-        .border-dark-500 {
-            border-color: #32323b;
-        }
-        .text-muted {
-            color: #9a9aa6;
-        }
-        .text-soft {
-            color: #c8c8d0;
-        }
-        /* card / panel style */
-        .panel {
-            background: #141418;
-            border: 1px solid #26262e;
-            border-radius: 16px;
-            padding: 1.5rem;
-            transition: border-color 0.2s ease;
-        }
-        .panel:hover {
-            border-color: #3d3d44;
-        }
-        .panel-glow {
-            box-shadow: 0 0 0 1px rgba(212, 168, 83, 0.08), 0 8px 32px rgba(0, 0, 0, 0.6);
-        }
-        /* drag zone */
-        .drop-zone {
-            border: 2px dashed #32323b;
-            border-radius: 16px;
-            background: #141418;
-            transition: all 0.25s ease;
-            cursor: pointer;
-        }
-        .drop-zone:hover,
-        .drop-zone.dragover {
-            border-color: #d4a853;
-            background: #1c1c22;
-            box-shadow: 0 0 0 4px rgba(212, 168, 83, 0.06);
-        }
-        .drop-zone.dragover {
-            border-style: solid;
-        }
-        /* table */
-        .file-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .file-table th {
-            text-align: left;
-            font-size: 0.7rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            color: #9a9aa6;
-            padding: 0.5rem 0.75rem;
-            border-bottom: 1px solid #26262e;
-        }
-        .file-table td {
-            padding: 0.5rem 0.75rem;
-            font-size: 0.85rem;
-            border-bottom: 1px solid #1c1c22;
-            vertical-align: middle;
-        }
-        .file-table tr:hover td {
-            background: rgba(255, 255, 255, 0.02);
-        }
-        .file-table .file-name {
-            font-weight: 500;
-            color: #eaeaea;
-            max-width: 180px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        /* form controls */
-        select,
-        input,
-        textarea {
-            background: #1c1c22;
-            border: 1px solid #32323b;
-            border-radius: 8px;
-            color: #eaeaea;
-            padding: 0.5rem 0.75rem;
-            font-size: 0.85rem;
-            transition: border-color 0.2s ease;
-            outline: none;
-            width: 100%;
-        }
-        select:focus,
-        input:focus,
-        textarea:focus {
-            border-color: #d4a853;
-            box-shadow: 0 0 0 3px rgba(212, 168, 83, 0.08);
-        }
-        select option {
-            background: #1c1c22;
-            color: #eaeaea;
-        }
-        /* buttons */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.55rem 1.25rem;
-            border-radius: 10px;
-            font-weight: 500;
-            font-size: 0.85rem;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-        }
-        .btn-primary {
-            background: #d4a853;
-            color: #0d0d0f;
-        }
-        .btn-primary:hover {
-            background: #e0b863;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 20px rgba(212, 168, 83, 0.25);
-        }
-        .btn-primary:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        .btn-secondary {
-            background: #26262e;
-            color: #eaeaea;
-            border: 1px solid #32323b;
-        }
-        .btn-secondary:hover {
-            background: #32323b;
-            border-color: #3d3d44;
-        }
-        .btn-danger {
-            background: #3d1f1f;
-            color: #e07a7a;
-            border: 1px solid #5a2a2a;
-        }
-        .btn-danger:hover {
-            background: #4d2525;
-        }
-        .btn-sm {
-            padding: 0.35rem 0.85rem;
-            font-size: 0.75rem;
-            border-radius: 6px;
-        }
-        .btn-xs {
-            padding: 0.2rem 0.55rem;
-            font-size: 0.65rem;
-            border-radius: 4px;
-        }
-        /* badge / tag */
-        .badge {
-            display: inline-block;
-            padding: 0.15rem 0.6rem;
-            border-radius: 999px;
-            font-size: 0.65rem;
-            font-weight: 500;
-            letter-spacing: 0.02em;
-            background: #26262e;
-            color: #9a9aa6;
-        }
-        .badge-gold {
-            background: rgba(212, 168, 83, 0.15);
-            color: #d4a853;
-        }
-        .badge-red {
-            background: rgba(201, 75, 75, 0.15);
-            color: #e07a7a;
-        }
-        /* tree preview */
-        .tree-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.2rem 0;
-            font-size: 0.8rem;
-            color: #b0b0ba;
-        }
-        .tree-item .icon {
-            width: 18px;
-            text-align: center;
-            color: #d4a853;
-        }
-        .tree-item .icon-folder {
-            color: #d4a853;
-        }
-        .tree-item .icon-file {
-            color: #7a7a86;
-        }
-        .tree-depth-0 {
-            padding-left: 0;
-        }
-        .tree-depth-1 {
-            padding-left: 1.5rem;
-        }
-        .tree-depth-2 {
-            padding-left: 3rem;
-        }
-        /* progress bar */
-        .progress-bar {
-            width: 100%;
-            height: 4px;
-            background: #1c1c22;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .progress-bar .fill {
-            height: 100%;
-            width: 0%;
-            background: #d4a853;
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-        /* responsive */
-        @media (max-width: 768px) {
-            .panel {
-                padding: 1rem;
-            }
-            .file-table th,
-            .file-table td {
-                padding: 0.35rem 0.5rem;
-                font-size: 0.7rem;
-            }
-            .file-table .file-name {
-                max-width: 100px;
-            }
-            .hide-on-mobile {
-                display: none;
-            }
-        }
-        /* animation */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(6px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .fade-in {
-            animation: fadeIn 0.3s ease forwards;
-        }
-        /* loading spinner */
-        .spinner {
-            width: 18px;
-            height: 18px;
-            border: 2px solid #32323b;
-            border-top-color: #d4a853;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-            display: inline-block;
-        }
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        /* tooltip helper */
-        .hint {
-            font-size: 0.7rem;
-            color: #7a7a86;
-            cursor: help;
-            border-bottom: 1px dotted #3d3d44;
-        }
-        /* toast */
-        .toast {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: #1c1c22;
-            border: 1px solid #32323b;
-            border-radius: 12px;
-            padding: 0.75rem 1.25rem;
-            font-size: 0.85rem;
-            color: #eaeaea;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-            z-index: 999;
-            max-width: 360px;
-            animation: fadeIn 0.3s ease;
-        }
-        .toast-success {
-            border-left: 3px solid #d4a853;
-        }
-        .toast-error {
-            border-left: 3px solid #c94b4b;
-        }
-        .toast-info {
-            border-left: 3px solid #5a8ab5;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sample Pack Alchemist</title>
+  <meta name="description" content="Turn loose audio files into catalogued, renamed, and ready-to-sell sample packs — entirely in the browser." />
+  <!-- Vendored locally so the archive stays reproducible offline. -->
+  <script src="./vendor/jszip.min.js"></script>
+  <script src="./vendor/FileSaver.min.js"></script>
+  <link rel="stylesheet" href="./assets/css/styles.css" />
 </head>
 <body>
 
-    <!-- ─── HEADER ─── -->
-    <header class="sticky top-0 z-50 bg-dark-900/80 backdrop-blur-md border-b border-dark-600">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
-            <div class="flex items-center gap-3">
-                <span class="text-2xl">🧪</span>
-                <div>
-                    <h1 class="text-lg font-semibold tracking-tight text-white">Sample Pack Alchemist</h1>
-                    <p class="text-xs text-muted -mt-0.5">Turn loose audio into sellable sample packs</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-2 text-xs text-muted">
-                <span id="fileCountBadge" class="badge">0 files</span>
-                <span id="statusBadge" class="badge badge-gold">ready</span>
-            </div>
+  <!-- ─── HEADER ─── -->
+  <header class="sticky top-0 z-50 bg-dark-900/80 backdrop-blur-md border-b border-dark-600">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl accent-gold inline-flex" aria-hidden="true"><svg class="icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6"/><path d="M10 3v5.5L4.7 18a2 2 0 0 0 1.8 3h11a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7.5 14h9"/></svg></span>
+        <div>
+          <h1 class="text-lg font-semibold tracking-tight text-white">Sample Pack Alchemist</h1>
+          <p class="text-xs text-muted -mt-0.5">Turn loose audio into sellable sample packs</p>
         </div>
-    </header>
-
-    <!-- ─── MAIN ─── -->
-    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
-
-        <!-- ═══ 1. UPLOAD ═══ -->
-        <section class="panel fade-in">
-            <div class="flex items-center gap-2 mb-4">
-                <span class="text-lg">📤</span>
-                <h2 class="text-base font-semibold text-white">Upload Audio Files</h2>
-                <span class="text-xs text-muted ml-1">WAV · AIFF · FLAC · MP3</span>
-            </div>
-
-            <div id="dropZone" class="drop-zone p-6 md:p-10 text-center">
-                <div class="pointer-events-none">
-                    <div class="text-3xl mb-2 opacity-60">🎧</div>
-                    <p class="text-sm text-soft font-medium">Drag &amp; drop files or folders here</p>
-                    <p class="text-xs text-muted mt-1">or click to browse · supports folder upload</p>
-                </div>
-                <input type="file" id="fileInput" multiple accept=".wav,.aiff,.aif,.flac,.mp3" class="hidden" />
-                <input type="file" id="folderInput" multiple webkitdirectory class="hidden" />
-            </div>
-
-            <div class="flex flex-wrap gap-2 mt-3">
-                <button id="browseBtn" class="btn btn-secondary text-sm">
-                    <span>📂</span> Browse Files
-                </button>
-                <button id="folderBtn" class="btn btn-secondary text-sm">
-                    <span>📁</span> Upload Folder
-                </button>
-                <button id="clearAllBtn" class="btn btn-danger text-sm ml-auto">
-                    <span>🗑️</span> Clear All
-                </button>
-            </div>
-            <!-- progress -->
-            <div id="uploadProgress" class="mt-3 hidden">
-                <div class="flex justify-between text-xs text-muted mb-1">
-                    <span id="progressLabel">Analyzing...</span>
-                    <span id="progressPercent">0%</span>
-                </div>
-                <div class="progress-bar"><div id="progressFill" class="fill"></div></div>
-            </div>
-        </section>
-
-        <!-- ═══ 2. SETTINGS ═══ -->
-        <section class="panel fade-in">
-            <div class="flex items-center gap-2 mb-4">
-                <span class="text-lg">⚙️</span>
-                <h2 class="text-base font-semibold text-white">Brand &amp; Product Settings</h2>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                    <label class="text-xs text-muted block mb-1">Artist / Brand Name</label>
-                    <input id="artistName" value="Zazie" placeholder="e.g. Zazie" />
-                </div>
-                <div>
-                    <label class="text-xs text-muted block mb-1">Pack Name</label>
-                    <input id="packName" value="HorrorTextures" placeholder="e.g. DarkTextures" />
-                </div>
-                <div>
-                    <label class="text-xs text-muted block mb-1">Default Mood</label>
-                    <input id="defaultMood" value="Dark" placeholder="e.g. Dark, Haunted, Cinematic" />
-                </div>
-                <div>
-                    <label class="text-xs text-muted block mb-1">Default BPM</label>
-                    <input id="defaultBpm" value="90" placeholder="e.g. 90" />
-                </div>
-                <div>
-                    <label class="text-xs text-muted block mb-1">Default Key</label>
-                    <input id="defaultKey" value="Am" placeholder="e.g. Am, C, Fm" />
-                </div>
-                <div>
-                    <label class="text-xs text-muted block mb-1">Naming Format</label>
-                    <select id="namingFormat">
-                        <option value="{Artist}_{PackName}_{Category}_{Key}_{Mood}_{BPM}_{Num}">Artist_Pack_Cat_Key_Mood_BPM_Num</option>
-                        <option value="{Artist}_{Category}_{Mood}_{Key}_{BPM}_{Num}">Artist_Cat_Mood_Key_BPM_Num</option>
-                        <option value="{PackName}_{Category}_{Key}_{Num}">Pack_Cat_Key_Num</option>
-                        <option value="{Category}_{Mood}_{Key}_{BPM}_{Num}">Cat_Mood_Key_BPM_Num</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs text-muted block mb-1">Numbering Start</label>
-                    <input id="numberStart" type="number" value="1" min="0" max="999" />
-                </div>
-                <div>
-                    <label class="text-xs text-muted block mb-1">Numbering Digits</label>
-                    <select id="numberDigits">
-                        <option value="2">01, 02 …</option>
-                        <option value="3" selected>001, 002 …</option>
-                        <option value="4">0001, 0002 …</option>
-                    </select>
-                </div>
-            </div>
-            <div class="mt-2 text-xs text-muted">
-                <span class="hint" title="Files will be renamed using the format above. Unmatched placeholders are omitted.">ⓘ Naming guide</span>
-            </div>
-        </section>
-
-        <!-- ═══ 3. FILE TABLE ═══ -->
-        <section class="panel fade-in">
-            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <div class="flex items-center gap-2">
-                    <span class="text-lg">📋</span>
-                    <h2 class="text-base font-semibold text-white">Files</h2>
-                    <span id="fileTableCount" class="badge">0</span>
-                </div>
-                <div class="flex gap-2">
-                    <button id="batchRenameBtn" class="btn btn-secondary btn-sm">
-                        <span>✏️</span> Batch Rename
-                    </button>
-                    <button id="removeSelectedBtn" class="btn btn-danger btn-sm">
-                        <span>✕</span> Remove Selected
-                    </button>
-                </div>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="file-table">
-                    <thead>
-                        <tr>
-                            <th style="width:28px"><input type="checkbox" id="selectAllCheck" /></th>
-                            <th>File</th>
-                            <th class="hide-on-mobile">Duration</th>
-                            <th class="hide-on-mobile">Type</th>
-                            <th class="hide-on-mobile">Loudness</th>
-                            <th>Category</th>
-                            <th style="width:48px"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="fileTableBody">
-                        <!-- rows rendered by JS -->
-                    </tbody>
-                </table>
-            </div>
-            <div id="emptyTableMsg" class="text-center py-6 text-sm text-muted">
-                No files uploaded yet.
-            </div>
-        </section>
-
-        <!-- ═══ 4. PRODUCT GENERATOR ═══ -->
-        <section class="panel fade-in">
-            <div class="flex items-center gap-2 mb-4">
-                <span class="text-lg">🎛️</span>
-                <h2 class="text-base font-semibold text-white">Product Generator</h2>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                    <label class="text-xs text-muted block mb-1">Preset Style</label>
-                    <select id="presetStyle">
-                        <option value="">— Custom —</option>
-                        <option value="Psychological Horror Toolkit">Psychological Horror Toolkit</option>
-                        <option value="Industrial Noise Pack">Industrial Noise Pack</option>
-                        <option value="Haunted Foley Pack">Haunted Foley Pack</option>
-                        <option value="Dark Ambient Textures">Dark Ambient Textures</option>
-                        <option value="Lo-Fi Tape Loops">Lo-Fi Tape Loops</option>
-                        <option value="Cinematic Impacts and Risers">Cinematic Impacts and Risers</option>
-                        <option value="Experimental Percussion">Experimental Percussion</option>
-                        <option value="Found Sound Library">Found Sound Library</option>
-                        <option value="Game Audio Horror Kit">Game Audio Horror Kit</option>
-                        <option value="Trailer Sound Design Pack">Trailer Sound Design Pack</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs text-muted block mb-1">Suggested Price Range</label>
-                    <select id="priceRange">
-                        <option value="$3 – $7">$3 – $7 (Micro)</option>
-                        <option value="$7 – $15" selected>$7 – $15 (Standard)</option>
-                        <option value="$15 – $25">$15 – $25 (Premium)</option>
-                        <option value="$25 – $45">$25 – $45 (Pro)</option>
-                        <option value="Free / Pay What You Want">Free / PWYW</option>
-                    </select>
-                </div>
-                <div class="flex items-end">
-                    <button id="generateProductBtn" class="btn btn-primary w-full">
-                        <span>✨</span> Generate Product Copy
-                    </button>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="text-xs text-muted block mb-1">Sample Pack Title</label>
-                    <input id="productTitle" placeholder="e.g. Psychological Horror Toolkit" />
-                </div>
-                <div>
-                    <label class="text-xs text-muted block mb-1">Tags (comma separated)</label>
-                    <input id="productTags" placeholder="horror, dark ambient, foley, game audio" />
-                </div>
-                <div class="md:col-span-2">
-                    <label class="text-xs text-muted block mb-1">Short Description</label>
-                    <textarea id="productShortDesc" rows="2" placeholder="A curated set of haunted textures..."></textarea>
-                </div>
-                <div class="md:col-span-2">
-                    <label class="text-xs text-muted block mb-1">Long Description (Gumroad / store)</label>
-                    <textarea id="productLongDesc" rows="4" placeholder="Full product description..."></textarea>
-                </div>
-                <div>
-                    <label class="text-xs text-muted block mb-1">License Terms</label>
-                    <textarea id="licenseTerms" rows="3" placeholder="Royalty-free license..."></textarea>
-                </div>
-                <div>
-                    <label class="text-xs text-muted block mb-1">Credits / Notes</label>
-                    <textarea id="creditsText" rows="3" placeholder="Credits, thank you notes..."></textarea>
-                </div>
-            </div>
-        </section>
-
-        <!-- ═══ 5. ZIP PREVIEW & EXPORT ═══ -->
-        <section class="panel fade-in">
-            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <div class="flex items-center gap-2">
-                    <span class="text-lg">📦</span>
-                    <h2 class="text-base font-semibold text-white">Export</h2>
-                    <span id="zipFileCount" class="badge">0 files</span>
-                </div>
-                <div class="flex gap-2">
-                    <button id="downloadZipBtn" class="btn btn-primary">
-                        <span>⬇️</span> Download ZIP
-                    </button>
-                    <button id="randomConceptBtn" class="btn btn-secondary btn-sm">
-                        <span>🎲</span> Random Concept
-                    </button>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <p class="text-xs text-muted mb-2">ZIP Preview (organised folders)</p>
-                    <div id="zipPreview" class="bg-dark-800 rounded-xl p-3 border border-dark-600 text-sm max-h-64 overflow-y-auto">
-                        <div class="text-muted text-xs italic">No files to preview yet.</div>
-                    </div>
-                </div>
-                <div>
-                    <p class="text-xs text-muted mb-2">Included text files</p>
-                    <div class="bg-dark-800 rounded-xl p-3 border border-dark-600 text-sm space-y-1">
-                        <div class="tree-item"><span class="icon icon-file">📄</span> README.txt</div>
-                        <div class="tree-item"><span class="icon icon-file">📄</span> LICENSE.txt</div>
-                        <div class="tree-item"><span class="icon icon-file">📄</span> CREDITS.txt</div>
-                        <div class="tree-item"><span class="icon icon-file">📄</span> product-description.txt</div>
-                        <div class="tree-item"><span class="icon icon-file">📄</span> file-list.txt</div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- ─── FOOTER ─── -->
-    <footer class="border-t border-dark-600 mt-8 py-4 text-center text-xs text-muted">
-        🧪 Sample Pack Alchemist · all processing happens locally · no upload to servers
-    </footer>
-
-    <!-- ─── TOAST CONTAINER ─── -->
-    <div id="toastContainer"></div>
-
-    <!-- ──────────────────────────────────────────────────────────── -->
-    <!-- ─── JAVASCRIPT ──────────────────────────────────────────── -->
-    <!-- ──────────────────────────────────────────────────────────── -->
-    <script>
-        (function() {
-            'use strict';
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  STATE
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            const state = {
-                files: [], // { id, file, name, ext, size, duration, loudness, peak, isLoop, category, bpm, key, analysisDone }
-                selected: new Set(),
-                analyzing: false,
-                nextId: 0,
-            };
-
-            // category list
-            const CATEGORIES = [
-                'Drums', 'Loops', 'One-Shots', 'Bass', 'Synths',
-                'Textures', 'Ambiences', 'Foley', 'Risers', 'Impacts',
-                'Vocals', 'FX', 'Misc'
-            ];
-
-            // keyword→category mapping
-            const KEYWORD_MAP = {
-                // Drums
-                kick: 'Drums',
-                snare: 'Drums',
-                hihat: 'Drums',
-                hat: 'Drums',
-                clap: 'Drums',
-                tom: 'Drums',
-                perc: 'Drums',
-                percussion: 'Drums',
-                cymbal: 'Drums',
-                crash: 'Drums',
-                ride: 'Drums',
-                drum: 'Drums',
-                // Loops
-                loop: 'Loops',
-                groove: 'Loops',
-                beat: 'Loops',
-                rhythm: 'Loops',
-                pattern: 'Loops',
-                // Bass
-                bass: 'Bass',
-                sub: 'Bass',
-                '808': 'Bass',
-                lowend: 'Bass',
-                // Synths
-                synth: 'Synths',
-                pad: 'Synths',
-                lead: 'Synths',
-                chord: 'Synths',
-                arp: 'Synths',
-                melody: 'Synths',
-                // Textures
-                texture: 'Textures',
-                drone: 'Textures',
-                noise: 'Textures',
-                hiss: 'Textures',
-                rumble: 'Textures',
-                // Ambiences
-                ambience: 'Ambiences',
-                ambient: 'Ambiences',
-                atmo: 'Ambiences',
-                atmosphere: 'Ambiences',
-                room: 'Ambiences',
-                space: 'Ambiences',
-                // Foley
-                foley: 'Foley',
-                rustle: 'Foley',
-                footstep: 'Foley',
-                step: 'Foley',
-                door: 'Foley',
-                creak: 'Foley',
-                cloth: 'Foley',
-                paper: 'Foley',
-                // Risers
-                riser: 'Risers',
-                rise: 'Risers',
-                build: 'Risers',
-                buildup: 'Risers',
-                sweep: 'Risers',
-                whoosh: 'Risers',
-                ascent: 'Risers',
-                // Impacts
-                impact: 'Impacts',
-                hit: 'Impacts',
-                strike: 'Impacts',
-                slam: 'Impacts',
-                bang: 'Impacts',
-                boom: 'Impacts',
-                // Vocals
-                vocal: 'Vocals',
-                voice: 'Vocals',
-                ahh: 'Vocals',
-                ohh: 'Vocals',
-                eh: 'Vocals',
-                chant: 'Vocals',
-                whisper: 'Vocals',
-                scream: 'Vocals',
-                // FX
-                fx: 'FX',
-                effect: 'FX',
-                glitch: 'FX',
-                stutter: 'FX',
-                transition: 'FX',
-                reverse: 'FX',
-                scan: 'FX',
-            };
-
-            // preset product data
-            const PRESET_DATA = {
-                'Psychological Horror Toolkit': {
-                    title: 'Psychological Horror Toolkit',
-                    short: 'A curated set of haunted textures, brittle foley fragments, unstable drones, and cinematic tension materials for psychological horror, experimental film, and dark ambient production.',
-                    long: 'Delve into the unsettling with the Psychological Horror Toolkit — a handcrafted collection of 40+ eerie sound assets designed to provoke unease, dread, and psychological tension.\n\nCarefully sourced from field recordings, analog degradation, and modular synthesis, this pack delivers:\n\n• 14 dark ambient drones & textures\n• 9 brittle foley & found sounds\n• 8 tension risers & stingers\n• 6 impact hits & sub booms\n• 5 haunting vocal fragments\n• 2 bonus loopable atmospheres\n\nPerfect for horror game audio, arthouse film, podcast scoring, and experimental music. All files are 24-bit WAV, royalty-free, and meticulously tagged for rapid workflow integration.',
-                    tags: 'horror, psychological, dark ambient, foley, tension, game audio, film scoring, drones, impacts, risers',
-                    license: 'Royalty-free license. You may use these sounds in commercial projects, games, films, and music. You may not resell or redistribute the raw audio files. Credit appreciated but not required.',
-                    credits: 'Pack curated and produced by Zazie.\nField recordings by Zazie & collaborators.\nModular synthesis and processing by Zazie.\nSpecial thanks to the dark ambient community.'
-                },
-                'Industrial Noise Pack': {
-                    title: 'Industrial Noise Pack',
-                    short: 'Harsh metallic clashes, grinding machinery, distorted drones, and aggressive percussive elements for industrial music, sound design, and game audio.',
-                    long: 'Heavy machinery, crumbling infrastructure, and raw aggression — the Industrial Noise Pack delivers 35+ gritty, high-impact sounds for producers and sound designers working in industrial, EBM, and noise genres.\n\nIncludes:\n• 12 metallic impacts & slams\n• 8 grinding drone loops\n• 6 percussive hits & bursts\n• 5 distorted risers\n• 4 atmospheric noise beds\n\nAll sounds are 24-bit WAV, 44.1kHz, royalty-free.',
-                    tags: 'industrial, noise, metallic, grinding, distortion, EBM, sound design, heavy',
-                    license: 'Royalty-free. Commercial use allowed. No redistribution of raw files. Credit optional.',
-                    credits: 'Produced by Zazie Industrial Works.\nField recordings captured at decommissioned factories.'
-                },
-                'Haunted Foley Pack': {
-                    title: 'Haunted Foley Pack',
-                    short: 'Ghostly creaks, disembodied whispers, rattling chains, and spectral footsteps — authentic haunted house foley for horror media.',
-                    long: 'Step into the abandoned manor with the Haunted Foley Pack — 30 meticulously recorded foley sounds capturing the essence of supernatural dread.\n\nEvery sound was performed and captured using vintage props, wooden structures, and analog processing to achieve an authentic, timeless quality.\n\nContents:\n• 8 creaking doors & floorboards\n• 6 ghostly whispers & breath\n• 5 rattling chains & metal\n• 4 footsteps on various surfaces\n• 4 eerie cloth & fabric movements\n• 3 unexplained ambiences\n\n24-bit WAV, 48kHz, fully loopable for game implementation.',
-                    tags: 'haunted, foley, horror, ghost, creak, whisper, footsteps, ambience, game audio',
-                    license: 'Royalty-free for commercial projects. No resale of raw samples. Attribution appreciated.',
-                    credits: 'Foley performance and recording by Zazie.\nLocation: The Old Mill Studio.'
-                },
-                'Dark Ambient Textures': {
-                    title: 'Dark Ambient Textures',
-                    short: 'Deep evolving drones, subterranean rumbles, ethereal pads, and cinematic noise beds for dark ambient, drone, and experimental composition.',
-                    long: 'Immerse yourself in shadow and depth. Dark Ambient Textures is a collection of 25 expansive, evolving soundscapes crafted for composers, sound healers, and experimental artists.\n\nEach texture is a journey — from sub-bass rumbles to shimmering harmonic clouds.\n\nIncludes:\n• 10 long-form drone textures (2-8 min)\n• 6 evolving pad swells\n• 5 granular noise beds\n• 4 subterranean rumble loops\n\n24-bit WAV, 44.1kHz, royalty-free.',
-                    tags: 'dark ambient, drone, texture, pad, rumble, cinematic, experimental, soundscape',
-                    license: 'Royalty-free. May be used in commercial music, film, and games. No raw redistribution.',
-                    credits: 'Created by Zazie using modular synths, granular processing, and field recordings.'
-                },
-                'Lo-Fi Tape Loops': {
-                    title: 'Lo-Fi Tape Loops',
-                    short: 'Warm, saturated tape loops with vinyl crackle, analog drift, and nostalgic charm for lo-fi hip-hop, chillwave, and ambient pop.',
-                    long: 'Embrace imperfection. Lo-Fi Tape Loops delivers 20 lovingly degraded tape loops recorded from vintage cassette machines and reel-to-reel units.\n\nEach loop carries the warmth of analog saturation, the flutter of worn tape, and the gentle crackle of age.\n\nPerfect for:\n• Lo-fi hip-hop beats\n• Chillwave & vaporwave\n• Ambient & downtempo\n• Film & game nostalgia scenes\n\nAll loops are 24-bit WAV, royalty-free, with BPM and key info embedded.',
-                    tags: 'lo-fi, tape, loop, warm, crackle, analog, hip-hop, chillwave, nostalgic',
-                    license: 'Royalty-free. Use in your music freely. Do not redistribute raw loops. Thank you!',
-                    credits: 'Recorded and processed by Zazie.\nHardware: TASCAM 414, Sony TC-377, various found cassettes.'
-                },
-                'Cinematic Impacts and Risers': {
-                    title: 'Cinematic Impacts and Risers',
-                    short: 'Massive trailer impacts, tension-building risers, and explosive hit points for cinematic sound design and trailer music.',
-                    long: 'Epic scale, intense energy. Cinematic Impacts and Risers is a powerhouse collection of 40+ sounds designed for trailer music, cinematic score, and game audio.\n\nFrom earth-shaking sub hits to soaring orchestral risers, every sound is mixed and mastered for immediate impact.\n\nIncludes:\n• 12 massive impacts (sub + layered)\n• 10 tension risers (short & long)\n• 8 explosive hit points\n• 6 orchestral stabs\n• 4 transition sweeps\n• 2 bonus braaams\n\n24-bit WAV, 96kHz, royalty-free.',
-                    tags: 'cinematic, impact, riser, trailer, braaam, orchestral, epic, sound design',
-                    license: 'Royal-free for media production. No resale of raw samples. Credit: Zazie.',
-                    credits: 'Designed by Zazie using hybrid orchestral processing and sound design.'
-                },
-                'Experimental Percussion': {
-                    title: 'Experimental Percussion',
-                    short: 'Unconventional percussion sounds from found objects, prepared instruments, and digital synthesis — for avant-garde and experimental music.',
-                    long: 'Break the rhythm mold. Experimental Percussion is a collection of 35+ unique percussive sounds crafted from everyday objects, prepared pianos, and modular chaos.\n\nIncludes:\n• 8 found object strikes (glass, metal, wood, plastic)\n• 6 prepared piano plucks & mallets\n• 5 granular percussion hits\n• 4 glitchy digital bursts\n• 4 loopable rhythmic patterns\n• 8 bonus one-shots\n\n24-bit WAV, 44.1kHz, royalty-free. Ideal for experimental, IDM, and contemporary composition.',
-                    tags: 'experimental, percussion, found sound, glitch, IDM, avant-garde, prepared piano',
-                    license: 'Royalty-free. Use freely in your art. No raw redistribution. Appreciate you!',
-                    credits: 'Conceived and performed by Zazie.\nObjects sourced from Junkyard Studio.'
-                },
-                'Found Sound Library': {
-                    title: 'Found Sound Library',
-                    short: 'A diverse collection of everyday sounds turned into musical and sound design assets — from kitchen clatter to urban atmospheres.',
-                    long: 'The world is an instrument. Found Sound Library captures 50+ everyday sounds and transforms them into usable production assets.\n\nEach sound is cleaned, edited, and categorised for instant musical or sound design use.\n\nCategories:\n• Kitchen & household (10)\n• Urban & street (8)\n• Nature & water (8)\n• Tools & machinery (6)\n• Paper & cloth (6)\n• Metals & glass (6)\n• Bonus: melodic found sounds (6)\n\n24-bit WAV, 48kHz, royalty-free.',
-                    tags: 'found sound, foley, field recording, urban, nature, household, sound design',
-                    license: 'Royalty-free. Commercial use OK. No resale of raw recordings. Share your art!',
-                    credits: 'Recorded on location by Zazie.\nGear: Zoom H6, Contact microphones, binaural rig.'
-                },
-                'Game Audio Horror Kit': {
-                    title: 'Game Audio Horror Kit',
-                    short: 'A complete horror game audio toolbox: monster vocals, environmental dread, jump scares, and interactive stingers.',
-                    long: 'Everything you need to terrify players. The Game Audio Horror Kit is purpose-built for indie and AAA horror game development.\n\nDesigned for interactive implementation with multiple variations, loops, and layering options.\n\nIncludes:\n• 8 monster vocalisations & growls\n• 6 jump scare stingers\n• 6 creepy ambience loops\n• 5 footstep sets (wood, metal, gravel, water, flesh)\n• 4 impact & hit reactions\n• 3 heartbeat & tension loops\n• 3 door & interaction sounds\n\n24-bit WAV, 48kHz, with metadata for Wwise and FMOD integration.',
-                    tags: 'game audio, horror, monster, ambience, stinger, footstep, interactive, Wwise, FMOD',
-                    license: 'Royalty-free for game development. No redistribution of raw assets. Credit appreciated.',
-                    credits: 'Game audio design by Zazie.\nVocal processing and sound design by Zazie Studio.'
-                },
-                'Trailer Sound Design Pack': {
-                    title: 'Trailer Sound Design Pack',
-                    short: 'Hollywood-caliber trailer sounds: cinematic impacts, soaring risers, sub drops, and tension builders for your next trailer.',
-                    long: 'Make every second count. Trailer Sound Design Pack delivers 45+ professional trailer sounds used by working sound designers.\n\nFrom the deepest sub drops to the most intricate tension textures — this pack has everything you need to craft compelling trailer audio.\n\nIncludes:\n• 12 cinematic impacts (layered, sub-heavy)\n• 10 tension risers (5 short, 5 long)\n• 8 sub drops & booms\n• 6 orchestral hits\n• 4 transition whooshes\n• 3 braaam variations\n• 2 bonus loopable tension beds\n\n24-bit WAV, 96kHz, royalty-free. Ready for immediate use in your DAW or video editor.',
-                    tags: 'trailer, cinematic, impact, riser, sub drop, braaam, orchestral, Hollywood, sound design',
-                    license: 'Royalty-free for commercial media production. No raw resale. Credit: Zazie.',
-                    credits: 'Sound design by Zazie.\nInspired by the great trailer houses.'
-                }
-            };
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  DOM REFS
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            const $ = id => document.getElementById(id);
-            const dropZone = $('dropZone');
-            const fileInput = $('fileInput');
-            const folderInput = $('folderInput');
-            const browseBtn = $('browseBtn');
-            const folderBtn = $('folderBtn');
-            const clearAllBtn = $('clearAllBtn');
-            const fileTableBody = $('fileTableBody');
-            const emptyTableMsg = $('emptyTableMsg');
-            const fileTableCount = $('fileTableCount');
-            const selectAllCheck = $('selectAllCheck');
-            const batchRenameBtn = $('batchRenameBtn');
-            const removeSelectedBtn = $('removeSelectedBtn');
-            const downloadZipBtn = $('downloadZipBtn');
-            const randomConceptBtn = $('randomConceptBtn');
-            const generateProductBtn = $('generateProductBtn');
-            const zipPreview = $('zipPreview');
-            const zipFileCount = $('zipFileCount');
-            const uploadProgress = $('uploadProgress');
-            const progressFill = $('progressFill');
-            const progressLabel = $('progressLabel');
-            const progressPercent = $('progressPercent');
-            const toastContainer = $('toastContainer');
-
-            // settings inputs
-            const artistName = $('artistName');
-            const packName = $('packName');
-            const defaultMood = $('defaultMood');
-            const defaultBpm = $('defaultBpm');
-            const defaultKey = $('defaultKey');
-            const namingFormat = $('namingFormat');
-            const numberStart = $('numberStart');
-            const numberDigits = $('numberDigits');
-
-            // product inputs
-            const presetStyle = $('presetStyle');
-            const productTitle = $('productTitle');
-            const productTags = $('productTags');
-            const productShortDesc = $('productShortDesc');
-            const productLongDesc = $('productLongDesc');
-            const licenseTerms = $('licenseTerms');
-            const creditsText = $('creditsText');
-            const priceRange = $('priceRange');
-
-            const fileCountBadge = $('fileCountBadge');
-            const statusBadge = $('statusBadge');
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  LOCAL STORAGE
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            function loadSettings() {
-                try {
-                    const saved = localStorage.getItem('spa_settings');
-                    if (saved) {
-                        const s = JSON.parse(saved);
-                        if (s.artistName) artistName.value = s.artistName;
-                        if (s.packName) packName.value = s.packName;
-                        if (s.defaultMood) defaultMood.value = s.defaultMood;
-                        if (s.defaultBpm) defaultBpm.value = s.defaultBpm;
-                        if (s.defaultKey) defaultKey.value = s.defaultKey;
-                        if (s.namingFormat) namingFormat.value = s.namingFormat;
-                        if (s.numberStart !== undefined) numberStart.value = s.numberStart;
-                        if (s.numberDigits) numberDigits.value = s.numberDigits;
-                        if (s.priceRange) priceRange.value = s.priceRange;
-                        if (s.productTitle) productTitle.value = s.productTitle;
-                        if (s.productTags) productTags.value = s.productTags;
-                        if (s.productShortDesc) productShortDesc.value = s.productShortDesc;
-                        if (s.productLongDesc) productLongDesc.value = s.productLongDesc;
-                        if (s.licenseTerms) licenseTerms.value = s.licenseTerms;
-                        if (s.creditsText) creditsText.value = s.creditsText;
-                        if (s.presetStyle) presetStyle.value = s.presetStyle;
-                    }
-                } catch (e) { /* ignore */ }
-            }
-
-            function saveSettings() {
-                try {
-                    const s = {
-                        artistName: artistName.value,
-                        packName: packName.value,
-                        defaultMood: defaultMood.value,
-                        defaultBpm: defaultBpm.value,
-                        defaultKey: defaultKey.value,
-                        namingFormat: namingFormat.value,
-                        numberStart: numberStart.value,
-                        numberDigits: numberDigits.value,
-                        priceRange: priceRange.value,
-                        productTitle: productTitle.value,
-                        productTags: productTags.value,
-                        productShortDesc: productShortDesc.value,
-                        productLongDesc: productLongDesc.value,
-                        licenseTerms: licenseTerms.value,
-                        creditsText: creditsText.value,
-                        presetStyle: presetStyle.value,
-                    };
-                    localStorage.setItem('spa_settings', JSON.stringify(s));
-                } catch (e) { /* ignore */ }
-            }
-
-            // auto-save settings on change
-            document.querySelectorAll('input, textarea, select').forEach(el => {
-                el.addEventListener('change', saveSettings);
-                el.addEventListener('blur', saveSettings);
-            });
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  TOAST
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            function showToast(message, type = 'info', duration = 4000) {
-                const div = document.createElement('div');
-                div.className = `toast toast-${type}`;
-                div.textContent = message;
-                toastContainer.appendChild(div);
-                setTimeout(() => {
-                    if (div.parentNode) div.remove();
-                }, duration);
-            }
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  FILE UPLOAD HANDLING
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            function handleFiles(fileList) {
-                const files = Array.from(fileList);
-                // filter audio
-                const audioFiles = files.filter(f => {
-                    const ext = f.name.split('.').pop().toLowerCase();
-                    return ['wav', 'aiff', 'aif', 'flac', 'mp3'].includes(ext);
-                });
-                if (audioFiles.length === 0) {
-                    showToast('No audio files found (WAV, AIFF, FLAC, MP3).', 'error');
-                    return;
-                }
-                // add to state
-                audioFiles.forEach(file => {
-                    const id = state.nextId++;
-                    const ext = file.name.split('.').pop().toLowerCase();
-                    state.files.push({
-                        id,
-                        file,
-                        name: file.name,
-                        ext,
-                        size: file.size,
-                        duration: null,
-                        loudness: null,
-                        peak: null,
-                        isLoop: null,
-                        category: guessCategory(file.name),
-                        bpm: guessBpm(file.name),
-                        key: guessKey(file.name),
-                        analysisDone: false,
-                    });
-                    state.selected.add(id);
-                });
-                renderTable();
-                updateCounts();
-                renderZipPreview();
-                saveSettings();
-                // start analysis
-                analyzeFiles();
-                showToast(`Added ${audioFiles.length} file(s). Analysing...`, 'success');
-            }
-
-            // ── category guess ──
-            function guessCategory(filename) {
-                const name = filename.toLowerCase().replace(/\.[^.]+$/, '');
-                // check keywords
-                for (const [kw, cat] of Object.entries(KEYWORD_MAP)) {
-                    if (name.includes(kw)) return cat;
-                }
-                // check duration-based later
-                return 'Misc';
-            }
-
-            // ── BPM guess from filename ──
-            function guessBpm(filename) {
-                const match = filename.match(/(\d{2,3})\s*[bB][pP][mM]/);
-                if (match) return match[1];
-                // also match patterns like _90_ or -90-
-                const m2 = filename.match(/[_-](\d{2,3})[_-]/);
-                if (m2) {
-                    const v = parseInt(m2[1]);
-                    if (v >= 60 && v <= 200) return m2[1];
-                }
-                return defaultBpm.value || '90';
-            }
-
-            // ── key guess from filename ──
-            function guessKey(filename) {
-                const pattern = /\b([A-G][#b]?m?)\b/;
-                const match = filename.match(pattern);
-                if (match) {
-                    const k = match[1];
-                    if (/^[A-G][#b]?(m|min|major)?$/i.test(k)) return k;
-                }
-                return defaultKey.value || 'Am';
-            }
-
-            // ── drag & drop ──
-            dropZone.addEventListener('dragover', e => {
-                e.preventDefault();
-                dropZone.classList.add('dragover');
-            });
-            dropZone.addEventListener('dragleave', e => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-            });
-            dropZone.addEventListener('drop', e => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-                if (e.dataTransfer.files.length > 0) {
-                    handleFiles(e.dataTransfer.files);
-                }
-            });
-            dropZone.addEventListener('click', () => fileInput.click());
-
-            browseBtn.addEventListener('click', () => fileInput.click());
-            folderBtn.addEventListener('click', () => folderInput.click());
-
-            fileInput.addEventListener('change', () => {
-                if (fileInput.files.length > 0) {
-                    handleFiles(fileInput.files);
-                    fileInput.value = '';
-                }
-            });
-            folderInput.addEventListener('change', () => {
-                if (folderInput.files.length > 0) {
-                    handleFiles(folderInput.files);
-                    folderInput.value = '';
-                }
-            });
-
-            // ── clear all ──
-            clearAllBtn.addEventListener('click', () => {
-                if (state.files.length === 0) return;
-                if (!confirm('Remove all files and reset?')) return;
-                state.files = [];
-                state.selected.clear();
-                state.nextId = 0;
-                renderTable();
-                updateCounts();
-                renderZipPreview();
-                showToast('Cleared all files.', 'info');
-            });
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  AUDIO ANALYSIS (Web Audio API)
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            const audioCtx = new(window.AudioContext || window.webkitAudioContext)();
-
-            async function analyzeFiles() {
-                const pending = state.files.filter(f => !f.analysisDone);
-                if (pending.length === 0) return;
-                state.analyzing = true;
-                statusBadge.textContent = 'analyzing...';
-                uploadProgress.classList.remove('hidden');
-                let completed = 0;
-                const total = pending.length;
-
-                for (const fileObj of pending) {
-                    try {
-                        const arrayBuffer = await fileObj.file.arrayBuffer();
-                        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
-                        const duration = audioBuffer.duration;
-                        fileObj.duration = duration;
-                        // loop detection: if duration < 8s, likely one-shot; if >= 8s and rhythmic pattern, loop
-                        // simple heuristic: < 2s → one-shot, 2-8s → maybe loop, >8s → texture/ambience
-                        if (duration < 2) {
-                            fileObj.isLoop = false;
-                            if (fileObj.category === 'Misc') fileObj.category = 'One-Shots';
-                        } else if (duration < 8) {
-                            fileObj.isLoop = true;
-                            if (fileObj.category === 'Misc') fileObj.category = 'Loops';
-                        } else {
-                            fileObj.isLoop = true;
-                            if (fileObj.category === 'Misc') fileObj.category = 'Textures';
-                        }
-                        // loudness (RMS) and peak
-                        const data = audioBuffer.getChannelData(0);
-                        let sumSq = 0;
-                        let peak = 0;
-                        for (let i = 0; i < data.length; i++) {
-                            const s = data[i];
-                            sumSq += s * s;
-                            if (Math.abs(s) > peak) peak = Math.abs(s);
-                        }
-                        const rms = Math.sqrt(sumSq / data.length);
-                        // loudness in dB (relative to 0dBFS)
-                        const loudnessdB = 20 * Math.log10(rms + 1e-10);
-                        const peakdB = 20 * Math.log10(peak + 1e-10);
-                        fileObj.loudness = Math.max(-60, Math.round(loudnessdB));
-                        fileObj.peak = Math.max(-60, Math.round(peakdB));
-                        fileObj.analysisDone = true;
-                    } catch (err) {
-                        console.warn('Analysis failed for', fileObj.name, err);
-                        fileObj.duration = null;
-                        fileObj.loudness = null;
-                        fileObj.peak = null;
-                        fileObj.isLoop = null;
-                        fileObj.analysisDone = true;
-                    }
-                    completed++;
-                    const pct = Math.round((completed / total) * 100);
-                    progressFill.style.width = pct + '%';
-                    progressPercent.textContent = pct + '%';
-                    progressLabel.textContent = `Analyzing ${completed}/${total} ...`;
-                    // yield to UI
-                    await new Promise(r => setTimeout(r, 10));
-                }
-
-                uploadProgress.classList.add('hidden');
-                state.analyzing = false;
-                statusBadge.textContent = 'ready';
-                renderTable();
-                renderZipPreview();
-                updateCounts();
-                showToast(`Analysis complete for ${completed} file(s).`, 'success');
-            }
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  TABLE RENDER
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            function renderTable() {
-                if (state.files.length === 0) {
-                    fileTableBody.innerHTML = '';
-                    emptyTableMsg.style.display = 'block';
-                    selectAllCheck.checked = false;
-                    return;
-                }
-                emptyTableMsg.style.display = 'none';
-
-                let html = '';
-                for (const f of state.files) {
-                    const checked = state.selected.has(f.id) ? 'checked' : '';
-                    const dur = f.duration !== null ? f.duration.toFixed(2) + 's' : '…';
-                    const loud = f.loudness !== null ? f.loudness + ' dB' : '…';
-                    const loopBadge = f.isLoop === true ? '<span class="badge badge-gold">loop</span>' :
-                        f.isLoop === false ? '<span class="badge">one-shot</span>' : '<span class="badge">…</span>';
-                    const ext = f.ext.toUpperCase();
-                    html += `
-                        <tr data-id="${f.id}">
-                            <td><input type="checkbox" class="file-check" data-id="${f.id}" ${checked} /></td>
-                            <td>
-                                <div class="file-name" title="${f.name}">${f.name}</div>
-                                <div class="text-xs text-muted">${loopBadge} ${f.bpm ? f.bpm+' BPM' : ''} ${f.key || ''}</div>
-                            </td>
-                            <td class="hide-on-mobile">${dur}</td>
-                            <td class="hide-on-mobile"><span class="badge">${ext}</span></td>
-                            <td class="hide-on-mobile">${loud}</td>
-                            <td>
-                                <select class="category-select text-xs" data-id="${f.id}">
-                                    ${CATEGORIES.map(c => `<option value="${c}" ${f.category === c ? 'selected' : ''}>${c}</option>`).join('')}
-                                </select>
-                            </td>
-                            <td>
-                                <button class="btn btn-danger btn-xs remove-file" data-id="${f.id}" title="Remove">✕</button>
-                            </td>
-                        </tr>
-                    `;
-                }
-                fileTableBody.innerHTML = html;
-
-                // bind events
-                fileTableBody.querySelectorAll('.file-check').forEach(cb => {
-                    cb.addEventListener('change', e => {
-                        const id = parseInt(e.target.dataset.id);
-                        if (e.target.checked) state.selected.add(id);
-                        else state.selected.delete(id);
-                        updateSelectAll();
-                    });
-                });
-                fileTableBody.querySelectorAll('.category-select').forEach(sel => {
-                    sel.addEventListener('change', e => {
-                        const id = parseInt(e.target.dataset.id);
-                        const fileObj = state.files.find(f => f.id === id);
-                        if (fileObj) fileObj.category = e.target.value;
-                        renderZipPreview();
-                        saveSettings();
-                    });
-                });
-                fileTableBody.querySelectorAll('.remove-file').forEach(btn => {
-                    btn.addEventListener('click', e => {
-                        const id = parseInt(e.target.dataset.id);
-                        removeFileById(id);
-                    });
-                });
-                updateSelectAll();
-            }
-
-            function removeFileById(id) {
-                state.files = state.files.filter(f => f.id !== id);
-                state.selected.delete(id);
-                renderTable();
-                updateCounts();
-                renderZipPreview();
-                saveSettings();
-            }
-
-            function updateSelectAll() {
-                const checks = fileTableBody.querySelectorAll('.file-check');
-                const checked = fileTableBody.querySelectorAll('.file-check:checked');
-                selectAllCheck.checked = checks.length > 0 && checks.length === checked.length;
-            }
-
-            selectAllCheck.addEventListener('change', e => {
-                const checked = e.target.checked;
-                fileTableBody.querySelectorAll('.file-check').forEach(cb => {
-                    cb.checked = checked;
-                    const id = parseInt(cb.dataset.id);
-                    if (checked) state.selected.add(id);
-                    else state.selected.delete(id);
-                });
-            });
-
-            removeSelectedBtn.addEventListener('click', () => {
-                const toRemove = state.files.filter(f => state.selected.has(f.id));
-                if (toRemove.length === 0) {
-                    showToast('No files selected.', 'info');
-                    return;
-                }
-                if (!confirm(`Remove ${toRemove.length} selected file(s)?`)) return;
-                const ids = new Set(toRemove.map(f => f.id));
-                state.files = state.files.filter(f => !ids.has(f.id));
-                ids.forEach(id => state.selected.delete(id));
-                renderTable();
-                updateCounts();
-                renderZipPreview();
-                saveSettings();
-                showToast(`Removed ${toRemove.length} file(s).`, 'info');
-            });
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  COUNTS & BADGES
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            function updateCounts() {
-                const n = state.files.length;
-                fileCountBadge.textContent = n + ' files';
-                fileTableCount.textContent = n;
-                zipFileCount.textContent = n + ' files';
-            }
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  BATCH RENAME
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            batchRenameBtn.addEventListener('click', () => {
-                const files = state.files;
-                if (files.length === 0) {
-                    showToast('No files to rename.', 'info');
-                    return;
-                }
-                const fmt = namingFormat.value;
-                const start = parseInt(numberStart.value) || 1;
-                const digits = parseInt(numberDigits.value) || 3;
-                const artist = artistName.value.trim() || 'Unknown';
-                const pack = packName.value.trim() || 'Pack';
-                const defaultMoodVal = defaultMood.value.trim() || 'Dark';
-                const defaultBpmVal = defaultBpm.value.trim() || '90';
-                const defaultKeyVal = defaultKey.value.trim() || 'Am';
-
-                let idx = start;
-                for (const f of files) {
-                    const cat = f.category || 'Misc';
-                    const mood = f.mood || defaultMoodVal;
-                    const bpm = f.bpm || defaultBpmVal;
-                    const key = f.key || defaultKeyVal;
-                    const num = String(idx).padStart(digits, '0');
-                    let newName = fmt
-                        .replace(/{Artist}/g, artist)
-                        .replace(/{PackName}/g, pack)
-                        .replace(/{Category}/g, cat)
-                        .replace(/{Key}/g, key)
-                        .replace(/{Mood}/g, mood)
-                        .replace(/{BPM}/g, bpm)
-                        .replace(/{Num}/g, num)
-                        // cleanup double underscores/spaces
-                        .replace(/[_\s]+/g, '_')
-                        .replace(/^_|_$/g, '') + '.' + f.ext;
-                    // ensure no double dots
-                    newName = newName.replace(/\.\./g, '.');
-                    f.name = newName;
-                    idx++;
-                }
-                renderTable();
-                renderZipPreview();
-                showToast(`Renamed ${files.length} file(s).`, 'success');
-                saveSettings();
-            });
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  PRODUCT GENERATOR
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            generateProductBtn.addEventListener('click', () => {
-                const preset = presetStyle.value;
-                const files = state.files;
-                const catCounts = {};
-                files.forEach(f => {
-                    catCounts[f.category] = (catCounts[f.category] || 0) + 1;
-                });
-                const total = files.length;
-
-                if (preset && PRESET_DATA[preset]) {
-                    const data = PRESET_DATA[preset];
-                    productTitle.value = data.title || preset;
-                    productShortDesc.value = data.short || '';
-                    productLongDesc.value = data.long || '';
-                    productTags.value = data.tags || '';
-                    licenseTerms.value = data.license || 'Royalty-free. No redistribution of raw files.';
-                    creditsText.value = data.credits || 'Produced by ' + (artistName.value || 'Zazie');
-                    showToast(`Loaded preset: ${preset}`, 'success');
-                } else {
-                    // generate from scratch
-                    const artist = artistName.value.trim() || 'Unknown';
-                    const pack = packName.value.trim() || 'Sample Pack';
-                    const mood = defaultMood.value.trim() || 'Dark';
-                    const catList = Object.entries(catCounts)
-                        .filter(([c]) => c !== 'Misc')
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([c, n]) => `${n} × ${c}`)
-                        .join(', ');
-                    const title = `${mood} ${pack}`;
-                    const short = `A curated collection of ${total} carefully crafted sounds — ${catList || 'diverse audio assets'} — for ${mood.toLowerCase()} production, game audio, and sound design.`;
-                    const long = [
-                        `# ${title}`,
-                        ``,
-                        `**${total} high-quality sounds** — ready for immediate use in your DAW, game engine, or video editor.`,
-                        ``,
-                        `## What's inside`,
-                        ...Object.entries(catCounts)
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([c, n]) => `- **${n}** ${c}`),
-                        ``,
-                        `All files are 24-bit WAV, royalty-free, and meticulously tagged for rapid workflow integration.`,
-                        ``,
-                        `Perfect for:`,
-                        `- Music production (any genre)`,
-                        `- Game audio & interactive design`,
-                        `- Film & video post-production`,
-                        `- Sound design & experimental art`,
-                        ``,
-                        `Created by ${artist}.`,
-                    ].join('\n');
-
-                    productTitle.value = title;
-                    productShortDesc.value = short;
-                    productLongDesc.value = long;
-                    const tags = [...new Set([mood, pack, ...Object.keys(catCounts)])].join(', ');
-                    productTags.value = tags;
-                    licenseTerms.value = 'Royalty-free license. You may use these sounds in commercial projects. You may not resell or redistribute the raw audio files. Credit appreciated but not required.';
-                    creditsText.value = `Produced by ${artist}.\nThank you for supporting independent sound design.`;
-                    showToast('Generated product copy from your files.', 'success');
-                }
-                saveSettings();
-            });
-
-            // preset style change → auto-fill if preset selected
-            presetStyle.addEventListener('change', () => {
-                const preset = presetStyle.value;
-                if (preset && PRESET_DATA[preset]) {
-                    const data = PRESET_DATA[preset];
-                    productTitle.value = data.title || preset;
-                    productShortDesc.value = data.short || '';
-                    productLongDesc.value = data.long || '';
-                    productTags.value = data.tags || '';
-                    licenseTerms.value = data.license || 'Royalty-free. No redistribution of raw files.';
-                    creditsText.value = data.credits || 'Produced by ' + (artistName.value || 'Zazie');
-                    saveSettings();
-                }
-            });
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  RANDOM CONCEPT
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            const CONCEPTS = [
-                'Abandoned Cathedral Drones',
-                'Neon Cyberpunk Foley',
-                'Subterranean Pulse Loops',
-                'Witch House Ritual Kit',
-                'Bio-Mechanical Textures',
-                'Ghost Radio Frequencies',
-                'Obsidian Impact Suite',
-                'Crystal Cave Ambiences',
-                'Dystopian Cityscape',
-                'Analog Horror Toolkit',
-                'Nocturnal Field Recordings',
-                'Rust & Glass Percussion',
-                'Vaporwave Dream Loops',
-                'Funeral Choir Textures',
-                'Industrial Heartbeat',
-            ];
-
-            randomConceptBtn.addEventListener('click', () => {
-                const concept = CONCEPTS[Math.floor(Math.random() * CONCEPTS.length)];
-                productTitle.value = concept;
-                productShortDesc.value = `A haunting collection of ${concept.toLowerCase()} — crafted for producers and sound designers who work in the shadows.`;
-                productLongDesc.value = `# ${concept}\n\nAn immersive set of carefully designed sound assets built for atmospheric production, game audio, and experimental composition.\n\nAll sounds are 24-bit WAV, royalty-free, and ready to use.\n\nCreated with attention to texture, depth, and emotional impact.`;
-                productTags.value = concept.replace(/\s+/g, ', ').toLowerCase() + ', sound design, atmospheric';
-                showToast(`✨ Random concept: ${concept}`, 'info');
-                saveSettings();
-            });
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  ZIP PREVIEW
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            function renderZipPreview() {
-                const files = state.files;
-                if (files.length === 0) {
-                    zipPreview.innerHTML = `<div class="text-muted text-xs italic">No files to preview yet.</div>`;
-                    return;
-                }
-                // group by category
-                const groups = {};
-                files.forEach(f => {
-                    const cat = f.category || 'Misc';
-                    if (!groups[cat]) groups[cat] = [];
-                    groups[cat].push(f);
-                });
-                let html = '';
-                const sortedCats = Object.keys(groups).sort();
-                let fileCount = 0;
-                for (const cat of sortedCats) {
-                    const items = groups[cat];
-                    fileCount += items.length;
-                    html +=
-                        `<div class="tree-item tree-depth-0"><span class="icon icon-folder">📁</span><span class="text-soft font-medium">${cat}/</span> <span class="text-muted text-xs">(${items.length})</span></div>`;
-                    items.forEach(f => {
-                        html +=
-                            `<div class="tree-item tree-depth-1"><span class="icon icon-file">🎵</span>${f.name}</div>`;
-                    });
-                }
-                // add text files
-                html += `<div class="tree-item tree-depth-0 mt-2"><span class="icon icon-folder">📄</span><span class="text-soft font-medium">_metadata/</span></div>`;
-                html +=
-                `<div class="tree-item tree-depth-1"><span class="icon icon-file">📄</span>README.txt</div>`;
-                html +=
-                `<div class="tree-item tree-depth-1"><span class="icon icon-file">📄</span>LICENSE.txt</div>`;
-                html +=
-                `<div class="tree-item tree-depth-1"><span class="icon icon-file">📄</span>CREDITS.txt</div>`;
-                html +=
-                `<div class="tree-item tree-depth-1"><span class="icon icon-file">📄</span>product-description.txt</div>`;
-                html +=
-                `<div class="tree-item tree-depth-1"><span class="icon icon-file">📄</span>file-list.txt</div>`;
-
-                zipPreview.innerHTML = html;
-                zipFileCount.textContent = fileCount + ' files + metadata';
-            }
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  ZIP EXPORT
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            downloadZipBtn.addEventListener('click', async () => {
-                const files = state.files;
-                if (files.length === 0) {
-                    showToast('No files to export. Upload some audio first!', 'error');
-                    return;
-                }
-
-                // check if analysis is still running
-                if (state.analyzing) {
-                    showToast('Please wait, analysis still in progress...', 'info');
-                    return;
-                }
-
-                const btn = downloadZipBtn;
-                btn.disabled = true;
-                btn.innerHTML = `<span class="spinner"></span> Building ZIP...`;
-                statusBadge.textContent = 'exporting...';
-
-                try {
-                    const zip = new JSZip();
-
-                    // ── group files by category ──
-                    const groups = {};
-                    files.forEach(f => {
-                        const cat = f.category || 'Misc';
-                        if (!groups[cat]) groups[cat] = [];
-                        groups[cat].push(f);
-                    });
-
-                    // ── add audio files ──
-                    for (const [cat, items] of Object.entries(groups)) {
-                        const folder = zip.folder(cat);
-                        for (const f of items) {
-                            const arrayBuffer = await f.file.arrayBuffer();
-                            folder.file(f.name, arrayBuffer);
-                        }
-                    }
-
-                    // ── metadata folder ──
-                    const meta = zip.folder('_metadata');
-
-                    // README
-                    const readme = [
-                        `# ${productTitle.value || 'Sample Pack'}`,
-                        ``,
-                        `Artist: ${artistName.value || 'Unknown'}`,
-                        `Pack: ${packName.value || 'Sample Pack'}`,
-                        `Files: ${files.length}`,
-                        `Generated: ${new Date().toISOString().split('T')[0]}`,
-                        ``,
-                        `---`,
-                        ``,
-                        `Thank you for downloading this sample pack.`,
-                        `All sounds are royalty-free for use in your projects.`,
-                        `Please see LICENSE.txt for full terms.`,
-                        ``,
-                        `For questions or custom requests:`,
-                        `[your-email@example.com]`,
-                    ].join('\n');
-                    meta.file('README.txt', readme);
-
-                    // LICENSE
-                    const license = licenseTerms.value.trim() ||
-                        'Royalty-free license. You may use these sounds in commercial projects. You may not resell or redistribute the raw audio files. Credit appreciated but not required.';
-                    meta.file('LICENSE.txt', license);
-
-                    // CREDITS
-                    const credits = creditsText.value.trim() ||
-                        `Produced by ${artistName.value || 'Zazie'}\nThank you for your support.`;
-                    meta.file('CREDITS.txt', credits);
-
-                    // product-description
-                    const prodDesc = [
-                        `Title: ${productTitle.value || 'Untitled Sample Pack'}`,
-                        ``,
-                        `Short Description:`,
-                        productShortDesc.value || '',
-                        ``,
-                        `Full Description:`,
-                        productLongDesc.value || '',
-                        ``,
-                        `Tags: ${productTags.value || ''}`,
-                        ``,
-                        `Suggested Price: ${priceRange.value || '$7 – $15'}`,
-                    ].join('\n');
-                    meta.file('product-description.txt', prodDesc);
-
-                    // file-list
-                    const fileList = files.map(f => {
-                        return `${f.category || 'Misc'}/${f.name}  (${f.duration ? f.duration.toFixed(2)+'s' : '?'})`;
-                    }).join('\n');
-                    meta.file('file-list.txt', `Total: ${files.length} files\n\n${fileList}`);
-
-                    // ── generate ZIP ──
-                    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-                    const zipName = `${(artistName.value || 'Artist').replace(/\s+/g,'_')}_${(packName.value || 'SamplePack').replace(/\s+/g,'_')}.zip`;
-                    saveAs(blob, zipName);
-
-                    showToast(`✅ ZIP exported: ${zipName} (${(blob.size/1024).toFixed(0)} KB)`, 'success');
-                } catch (err) {
-                    console.error('ZIP error:', err);
-                    showToast('ZIP export failed: ' + err.message, 'error');
-                }
-
-                btn.disabled = false;
-                btn.innerHTML = `⬇️ Download ZIP`;
-                statusBadge.textContent = 'ready';
-            });
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            //  INIT
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-            loadSettings();
-            renderTable();
-            updateCounts();
-            renderZipPreview();
-            showToast('🧪 Sample Pack Alchemist ready. Upload your audio to begin.', 'info', 3000);
-
-            // If there's an existing productTitle from localStorage but no preset, mark preset as custom
-            if (productTitle.value && !presetStyle.value) {
-                presetStyle.value = '';
-            }
-
-            console.log('🔊 Sample Pack Alchemist initialized');
-            console.log(`📦 ${state.files.length} files loaded`);
-
-        })();
-    </script>
-
+      </div>
+      <div class="flex items-center gap-2 text-xs text-muted">
+        <span id="fileCountBadge" class="badge">0 files</span>
+        <span id="statusBadge" class="badge badge-gold">ready</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── MAIN ─── -->
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- ═══ 1. UPLOAD ═══ -->
+    <section class="panel fade-in" aria-labelledby="upload-heading">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="text-lg accent-gold inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11"/><path d="m7 8 5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></span>
+        <h2 id="upload-heading" class="text-base font-semibold text-white">Upload Audio Files</h2>
+        <span class="text-xs text-muted ml-1">WAV · AIFF · FLAC · MP3</span>
+      </div>
+
+      <div id="dropZone" class="drop-zone p-6 md:p-10 text-center" role="button" tabindex="0" aria-label="Upload audio files by clicking or dropping">
+        <div class="pointer-events-none">
+          <div class="text-3xl mb-2 opacity-60 flex justify-center accent-gold" aria-hidden="true"><svg class="icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a8 8 0 1 1 16 0"/><path d="M4 14a2 2 0 0 1 2-2h1a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2z"/><path d="M20 14a2 2 0 0 0-2-2h-1a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1a2 2 0 0 0 2-2z"/></svg></div>
+          <p class="text-sm text-soft font-medium">Drag &amp; drop files or folders here</p>
+          <p class="text-xs text-muted mt-1">or click to browse · supports folder upload</p>
+        </div>
+        <input type="file" id="fileInput" multiple accept=".wav,.aiff,.aif,.flac,.mp3" class="hidden" />
+        <input type="file" id="folderInput" multiple webkitdirectory class="hidden" />
+      </div>
+
+      <div class="flex flex-wrap gap-2 mt-3">
+        <button id="browseBtn" class="btn btn-secondary text-sm" type="button"><span class="inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span> Browse Files</button>
+        <button id="folderBtn" class="btn btn-secondary text-sm" type="button"><span class="inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v6"/><path d="m9 14 3-3 3 3"/></svg></span> Upload Folder</button>
+        <button id="clearAllBtn" class="btn btn-danger text-sm ml-auto" type="button"><span class="inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></span> Clear All</button>
+      </div>
+      <!-- progress -->
+      <div id="uploadProgress" class="mt-3 hidden" role="status">
+        <div class="flex justify-between text-xs text-muted mb-1">
+          <span id="progressLabel">Analyzing...</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar"><div id="progressFill" class="fill"></div></div>
+      </div>
+    </section>
+
+    <!-- ═══ 2. SETTINGS ═══ -->
+    <section class="panel fade-in" aria-labelledby="settings-heading">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="text-lg accent-gold inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg></span>
+        <h2 id="settings-heading" class="text-base font-semibold text-white">Brand &amp; Product Settings</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+          <label class="text-xs text-muted block mb-1" for="artistName">Artist / Brand Name</label>
+          <input id="artistName" value="Zazie" placeholder="e.g. Zazie" />
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1" for="packName">Pack Name</label>
+          <input id="packName" value="HorrorTextures" placeholder="e.g. DarkTextures" />
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1" for="defaultMood">Default Mood</label>
+          <input id="defaultMood" value="Dark" placeholder="e.g. Dark, Haunted, Cinematic" />
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1" for="defaultBpm">Default BPM</label>
+          <input id="defaultBpm" value="90" placeholder="e.g. 90" />
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1" for="defaultKey">Default Key</label>
+          <input id="defaultKey" value="Am" placeholder="e.g. Am, C, Fm" />
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1" for="namingFormat">Naming Format</label>
+          <select id="namingFormat">
+            <option value="{Artist}_{PackName}_{Category}_{Key}_{Mood}_{BPM}_{Num}">Artist_Pack_Cat_Key_Mood_BPM_Num</option>
+            <option value="{Artist}_{Category}_{Mood}_{Key}_{BPM}_{Num}">Artist_Cat_Mood_Key_BPM_Num</option>
+            <option value="{PackName}_{Category}_{Key}_{Num}">Pack_Cat_Key_Num</option>
+            <option value="{Category}_{Mood}_{Key}_{BPM}_{Num}">Cat_Mood_Key_BPM_Num</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1" for="numberStart">Numbering Start</label>
+          <input id="numberStart" type="number" value="1" min="0" max="999" />
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1" for="numberDigits">Numbering Digits</label>
+          <select id="numberDigits">
+            <option value="2">01, 02 …</option>
+            <option value="3" selected>001, 002 …</option>
+            <option value="4">0001, 0002 …</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-2 text-xs text-muted">
+        <span class="hint" title="Files will be renamed using the format above. Unmatched placeholders are omitted.">ⓘ Naming guide</span>
+      </div>
+    </section>
+
+    <!-- ═══ 3. FILE TABLE ═══ -->
+    <section class="panel fade-in" aria-labelledby="files-heading">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-lg accent-gold inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="12" height="18" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6M9 15h6M9 19h4"/></svg></span>
+          <h2 id="files-heading" class="text-base font-semibold text-white">Files</h2>
+          <span id="fileTableCount" class="badge">0</span>
+        </div>
+        <div class="flex gap-2">
+          <button id="batchRenameBtn" class="btn btn-secondary btn-sm" type="button"><span class="inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span> Batch Rename</button>
+          <button id="removeSelectedBtn" class="btn btn-danger btn-sm" type="button"><span class="inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></span> Remove Selected</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="file-table">
+          <thead>
+            <tr>
+              <th style="width:28px"><input type="checkbox" id="selectAllCheck" aria-label="Select all files" /></th>
+              <th>File</th>
+              <th class="hide-on-mobile">Duration</th>
+              <th class="hide-on-mobile">Type</th>
+              <th class="hide-on-mobile">Loudness</th>
+              <th>Category</th>
+              <th style="width:48px"></th>
+            </tr>
+          </thead>
+          <tbody id="fileTableBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyTableMsg" class="text-center py-6 text-sm text-muted">No files uploaded yet.</div>
+    </section>
+
+    <!-- ═══ 4. PRODUCT GENERATOR ═══ -->
+    <section class="panel fade-in" aria-labelledby="product-heading">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="text-lg accent-gold inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h4M12 8h8"/><circle cx="10" cy="8" r="2"/><path d="M4 16h8M16 16h4"/><circle cx="14" cy="16" r="2"/></svg></span>
+        <h2 id="product-heading" class="text-base font-semibold text-white">Product Generator</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div>
+          <label class="text-xs text-muted block mb-1" for="presetStyle">Preset Style</label>
+          <select id="presetStyle">
+            <option value="">— Custom —</option>
+            <option value="Psychological Horror Toolkit">Psychological Horror Toolkit</option>
+            <option value="Industrial Noise Pack">Industrial Noise Pack</option>
+            <option value="Haunted Foley Pack">Haunted Foley Pack</option>
+            <option value="Dark Ambient Textures">Dark Ambient Textures</option>
+            <option value="Lo-Fi Tape Loops">Lo-Fi Tape Loops</option>
+            <option value="Cinematic Impacts and Risers">Cinematic Impacts and Risers</option>
+            <option value="Experimental Percussion">Experimental Percussion</option>
+            <option value="Found Sound Library">Found Sound Library</option>
+            <option value="Game Audio Horror Kit">Game Audio Horror Kit</option>
+            <option value="Trailer Sound Design Pack">Trailer Sound Design Pack</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1" for="priceRange">Suggested Price Range</label>
+          <select id="priceRange">
+            <option value="$3 – $7">$3 – $7 (Micro)</option>
+            <option value="$7 – $15" selected>$7 – $15 (Standard)</option>
+            <option value="$15 – $25">$15 – $25 (Premium)</option>
+            <option value="$25 – $45">$25 – $45 (Pro)</option>
+            <option value="Free / Pay What You Want">Free / PWYW</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="generateProductBtn" class="btn btn-primary w-full" type="button"><span class="inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.8 2.2L22 20l-2.2.8L19 23l-.8-2.2L16 20l2.2-.8z"/></svg></span> Generate Product Copy</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-muted block mb-1" for="productTitle">Sample Pack Title</label>
+          <input id="productTitle" placeholder="e.g. Psychological Horror Toolkit" />
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1" for="productTags">Tags (comma separated)</label>
+          <input id="productTags" placeholder="horror, dark ambient, foley, game audio" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs text-muted block mb-1" for="productShortDesc">Short Description</label>
+          <textarea id="productShortDesc" rows="2" placeholder="A curated set of haunted textures..."></textarea>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs text-muted block mb-1" for="productLongDesc">Long Description (Gumroad / store)</label>
+          <textarea id="productLongDesc" rows="4" placeholder="Full product description..."></textarea>
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1" for="licenseTerms">License Terms</label>
+          <textarea id="licenseTerms" rows="3" placeholder="Royalty-free license..."></textarea>
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1" for="creditsText">Credits / Notes</label>
+          <textarea id="creditsText" rows="3" placeholder="Credits, thank you notes..."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 5. ZIP PREVIEW & EXPORT ═══ -->
+    <section class="panel fade-in" aria-labelledby="export-heading">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-lg accent-gold inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg></span>
+          <h2 id="export-heading" class="text-base font-semibold text-white">Export</h2>
+          <span id="zipFileCount" class="badge">0 files</span>
+        </div>
+        <div class="flex gap-2">
+          <button id="downloadZipBtn" class="btn btn-primary" type="button"><span class="inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 19h14"/></svg></span> Download ZIP</button>
+          <button id="randomConceptBtn" class="btn btn-secondary btn-sm" type="button"><span class="inline-flex" aria-hidden="true"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r=".8" fill="currentColor"/><circle cx="15.5" cy="8.5" r=".8" fill="currentColor"/><circle cx="8.5" cy="15.5" r=".8" fill="currentColor"/><circle cx="15.5" cy="15.5" r=".8" fill="currentColor"/><circle cx="12" cy="12" r=".8" fill="currentColor"/></svg></span> Random Concept</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <p class="text-xs text-muted mb-2">ZIP Preview (organised folders)</p>
+          <div id="zipPreview" class="bg-dark-800 rounded-xl p-3 border border-dark-600 text-sm max-h-64 overflow-y-auto">
+            <div class="text-muted text-xs italic">No files to preview yet.</div>
+          </div>
+        </div>
+        <div>
+          <p class="text-xs text-muted mb-2">Included text files</p>
+          <div class="bg-dark-800 rounded-xl p-3 border border-dark-600 text-sm space-y-1">
+            <div class="tree-item"><span class="icon icon-file"><svg class="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span> README.txt</div>
+            <div class="tree-item"><span class="icon icon-file"><svg class="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span> LICENSE.txt</div>
+            <div class="tree-item"><span class="icon icon-file"><svg class="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span> CREDITS.txt</div>
+            <div class="tree-item"><span class="icon icon-file"><svg class="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span> product-description.txt</div>
+            <div class="tree-item"><span class="icon icon-file"><svg class="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span> file-list.txt</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ─── FOOTER ─── -->
+  <footer class="border-t border-dark-600 mt-8 py-4 text-center text-xs text-muted">
+    Sample Pack Alchemist · all processing happens locally · no upload to servers
+  </footer>
+
+  <!-- ─── TOAST CONTAINER ─── -->
+  <div id="toastContainer"></div>
+
+  <script type="module" src="./src/app.js"></script>
 </body>
 </html>
-```
-### Sample Pack Workflow
-
-Once you upload your audio files, the app works as a complete production pipeline. Here's how it flows:
-
-- **Upload & Analysis**: Drag and drop WAV, AIFF, FLAC, or MP3 files (or entire folders). The app automatically analyzes each file to estimate duration, loudness, peak level, and whether it's a loop or one-shot. It also guesses the category, BPM, and key based on filename keywords.
-
-- **Organization & Renaming**: Files are sorted into categories like Drums, Loops, Bass, or FX. You can manually override any category using the dropdown in the file table. The batch rename tool lets you apply a professional naming convention (e.g., `Artist_Pack_Category_Key_Mood_BPM_001`) with customizable artist name, pack name, mood, and numbering.
-
-- **Product Copy Generation**: Choose from 10 preset product styles (e.g., "Psychological Horror Toolkit") or generate custom copy based on your uploaded files. The app creates a title, short/long description, tags, license terms, and credits — all written in a polished, marketable tone.
-
-- **ZIP Export**: Preview the organized folder structure before export. The final ZIP includes audio files sorted by category, plus `README.txt`, `LICENSE.txt`, `CREDITS.txt`, `product-description.txt`, and `file-list.txt`. Perfect for selling on Gumroad, Ko-fi, or Itch.
